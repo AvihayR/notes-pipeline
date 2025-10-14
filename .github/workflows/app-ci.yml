@@ -9,8 +9,20 @@ on:
 jobs:
     build-and-test:
         runs-on: ubuntu-latest
+
         steps:
             - uses: actions/checkout@v4
+            - name: Create Reports directory
+              run: mkdir -p reports
+
+            - name: Lint Frontend & Audit NPM Packages
+              working-directory: ./frontend
+              run: |
+                  echo "Lint Frontend & Audit NPM Packages"
+                  npm ci
+                  npx eslint . -f json -o ../reports/eslint-report.json || true
+                  npm audit --json > ../reports/npm-audit.json || true
+
             - name: Build Docker Images according to Docker-compose Instructions
               run: docker compose build
 
@@ -27,3 +39,27 @@ jobs:
                   curl -f http://localhost:8080 > /dev/null || exit 1
                   echo "Test Backend & DB Using GET * Endpoint"
                   curl -f http://localhost:8000/notes > /dev/null || exit 1
+
+            - name: Upload a Build Artifact
+              uses: actions/upload-artifact@v4.6.2
+              with:
+                  path: reports/*
+
+    security-scan:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Run Trivy vulnerability scanner
+              uses: aquasecurity/trivy-action@0.33.1
+              with:
+                  scan-type: "fs"
+                  scan-ref: "."
+                  format: "json"
+                  output: "trivy-results.json"
+
+            - name: Upload Trivy results
+              uses: github/codeql-action/upload-sarif@v2
+              with:
+                  sarif_file: "trivy-results.sarif"
