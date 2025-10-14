@@ -1,0 +1,29 @@
+name: Application CI - Build and Test
+
+on:
+    push:
+        branches-ignore: ["main"]
+    pull_request:
+        branches: ["main"]
+
+jobs:
+    build-and-test:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - name: Build Docker Images according to Docker-compose Instructions
+              run: docker compose build
+
+            - name: Running Containers w/ Docker Compose ..
+              run: |
+                  echo "Run Docker Containers Locally"
+                  docker compose up -d
+
+            - name: Integration Tests
+              run: |
+                  echo "Running Integration Tests .."
+                  sleep 5
+                  echo "Test Frontend"
+                  curl -f http://localhost:8080 > /dev/null || exit 1
+                  echo "Test Backend & DB Using GET * Endpoint"
+                  curl -f http://localhost:8000/notes > /dev/null || exit 1
