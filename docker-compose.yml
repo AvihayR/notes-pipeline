@@ -9,6 +9,9 @@ services:
   
   backend:
     container_name: backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     image: backend:latest
     environment:
       - MONGODB_URL=mongodb://db:27017
@@ -19,6 +22,9 @@ services:
   
   frontend:
     container_name: frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
     image: frontend:latest
     environment:
       - API_URL=backend:8000
