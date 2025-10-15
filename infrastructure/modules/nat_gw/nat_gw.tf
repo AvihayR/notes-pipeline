@@ -9,7 +9,8 @@ resource "aws_nat_gateway" "nat_gw" {
   subnet_id     = var.subnet_id
 
   tags = {
-    Name = "NAT Gateway for private subnets outbound traffic"
+    Name        = "Notes-NAT-Gateway"
+    description = "NAT Gateway for private subnets outbound traffic"
   }
 }
 
