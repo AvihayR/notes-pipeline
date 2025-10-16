@@ -34,6 +34,24 @@ module "private_subnets" {
   description = "Private subnets"
 }
 
+module "public_rt" {
+  for_each         = module.public_subnets
+  source           = "./modules/public_rt"
+  vpc_id           = module.vpc.vpc_id
+  igw_id           = module.igw.igw-id
+  local_cidr       = var.vpc_cidr
+  public_subnet_id = each.value.id
+}
+
+module "private_rt" {
+  for_each          = module.private_subnets
+  source            = "./modules/private_rt"
+  vpc_id            = module.vpc.vpc_id
+  nat_gw_id         = module.nat_gw.id
+  local_cidr        = var.vpc_cidr
+  private_subnet_id = each.value.id
+}
+
 module "doc_db" {
   source              = "./modules/document_db"
   master_username     = var.db_user
