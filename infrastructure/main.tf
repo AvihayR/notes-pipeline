@@ -33,3 +33,14 @@ module "private_subnets" {
   vpc_id      = module.vpc.vpc_id
   description = "Private subnets"
 }
+
+module "doc_db" {
+  source              = "./modules/document_db"
+  master_username     = var.db_user
+  master_password     = var.db_password
+  vpc_id              = module.vpc.vpc_id
+  az_list             = values(var.availability_zone)
+  allowed_cidr_blocks = values(var.private_subnet_cidr_block)
+  subnet_ids          = [for s in module.private_subnets : s.id]
+
+}
