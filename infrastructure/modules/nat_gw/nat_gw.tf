@@ -1,0 +1,19 @@
+resource "aws_eip" "eip" {
+  tags = {
+    "Name" = "Elastic IP"
+  }
+}
+
+resource "aws_nat_gateway" "nat_gw" {
+  allocation_id = aws_eip.eip.allocation_id
+  subnet_id     = var.subnet_id
+
+  tags = {
+    Name        = "Notes-NAT-Gateway"
+    description = "NAT Gateway for private subnets outbound traffic"
+  }
+}
+
+output "id" {
+  value = aws_nat_gateway.nat_gw.id
+}
