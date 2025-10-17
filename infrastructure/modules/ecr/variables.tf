@@ -9,11 +9,3 @@ variable "vpc_id" {
 variable "aws_region" {
   type = string
 }
-
-variable "private_subnet_ids" {
-  type = list(string)
-}
-
-variable "private_route_table_ids" {
-  type = list(string)
-}
