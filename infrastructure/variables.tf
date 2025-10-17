@@ -28,3 +28,14 @@ variable "private_subnet_cidr_block" {
     "az-b" = "10.0.20.0/24"
   }
 }
+
+
+variable "db_user" {
+  type = string
+}
+
+variable "db_password" {
+  type = string
+}
+
+
