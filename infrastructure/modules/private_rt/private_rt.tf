@@ -21,6 +21,6 @@ resource "aws_route_table_association" "private_rt-association" {
   route_table_id = aws_route_table.private_rt.id
 }
 
-output "rt_id" {
+output "id" {
   value = aws_route_table.private_rt.id
 }
