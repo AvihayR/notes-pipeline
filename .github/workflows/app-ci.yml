@@ -1,66 +1,112 @@
 name: Application CI - Build and Test
-
 on:
-    push:
-        branches-ignore: ["main"]
-    pull_request:
-        branches: ["main"]
+  push:
+    branches-ignore: ["main"]
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+  issues: write
 
 jobs:
-    build-and-test:
-        runs-on: ubuntu-latest
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create Reports directory
+        run: mkdir -p reports
 
-        steps:
-            - uses: actions/checkout@v4
-            - name: Create Reports directory
-              run: mkdir -p reports
+      - name: Lint Frontend & Audit NPM Packages
+        # TODO: Lint Backend
+        working-directory: ./frontend
+        run: |
+          echo "Lint Frontend & Audit NPM Packages"
+          npm ci
+          npx eslint . -f json -o ../reports/eslint-report.json || true
+          npm audit --json > ../reports/npm-audit.json || true
 
-            - name: Lint Frontend & Audit NPM Packages
-              working-directory: ./frontend
-              run: |
-                  echo "Lint Frontend & Audit NPM Packages"
-                  npm ci
-                  npx eslint . -f json -o ../reports/eslint-report.json || true
-                  npm audit --json > ../reports/npm-audit.json || true
+      - name: Post Status - ESLint & NPM Audit Results
+        run: |
+          echo "Posting ESLint & NPM Audit Results"
+          ESLINT_ERRORS=$(jq '[.[] | .errorCount] | add // 0' reports/eslint-report.json)
+          ESLINT_WARNINGS=$(jq '[.[] | .warningCount] | add // 0' reports/eslint-report.json)
+          NPM_CRITICALS=$(jq '.metadata.vulnerabilities.critical' reports/npm-audit.json)
+          NPM_HIGHS=$(jq '.metadata.vulnerabilities.high' reports/npm-audit.json)
 
-            - name: Build Docker Images according to Docker-compose Instructions
-              run: docker compose build
+          # Post ESLint reports 📭
+          if [ "$ESLINT_ERRORS" -eq 0 ] && [ "$ESLINT_WARNINGS" -eq 0 ]; then
+            echo "No ESLint issues found!"
+          else
+            echo "ESLint issues found, Please review the Workflow Run's Artifacts 👨‍💻❗"
+            echo "ESLint Error Count: ${ESLINT_ERRORS}, ESLint Warning Count: ${ESLINT_WARNINGS}"
 
-            - name: Running Containers w/ Docker Compose ..
-              run: |
-                  echo "Run Docker Containers Locally"
-                  docker compose up -d
+            gh issue create \
+              --title "ESLint found $ESLINT_ERRORS Errors and $ESLINT_WARNINGS Warnings" \
+              --body "ESLint has detected **$ESLINT_ERRORS errors** and **$ESLINT_WARNINGS warnings**.
+              Please download the \`eslint-report\` artifact from the [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) and fix the issues accordingly." 
+          fi
 
-            - name: Integration Tests
-              run: |
-                  echo "Running Integration Tests .."
-                  sleep 5
-                  echo "Test Frontend"
-                  curl -f http://localhost:8080 > /dev/null || exit 1
-                  echo "Test Backend & DB Using GET * Endpoint"
-                  curl -f http://localhost:8000/notes > /dev/null || exit 1
+          # Post NPM Audit reports 📭
+          if [ "$NPM_CRITICALS" -eq 0 ] && [ "$NPM_HIGHS" -eq 0 ]; then
+            echo "No NPM Audit issues found!"
+          else
+            echo "NPM Audit Packages Vulnerabilities found, Please review the Workflow Run's Artifacts 🔍❗"
+            echo "Critical Vulnerabilities Count: ${NPM_CRITICALS}, High Vulnerabilities Count: ${NPM_HIGHS}"
 
-            - name: Upload NPM & ESLint reports
-              uses: actions/upload-artifact@v4.6.2
-              with:
-                  path: reports/*
+            gh issue create \
+              --title "NPM Packages Vulnerability Scan found $NPM_CRITICALS Errors and $NPM_HIGHS" \
+              --body "NPM Audit has found **$NPM_CRITICALS Critical issues** and **$NPM_HIGHS High issues**.
+              Please download the \`npm-audit.json\` artifact from the [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) and fix the issues accordingly."
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
 
-    security-scan:
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
+      - name: Build Docker Images according to Docker-compose Instructions
+        run: docker compose build
 
-            - name: Run Trivy vulnerability scanner
-              uses: aquasecurity/trivy-action@0.33.1
-              with:
-                  scan-type: "fs"
-                  scan-ref: "."
-                  format: "json"
-                  output: "trivy-results.json"
+      - name: Running Containers w/ Docker Compose ..
+        run: |
+          echo "Run Docker Containers Locally"
+          docker compose up -d
 
-            - name: Upload Trivy results
-              uses: actions/upload-artifact@v4.6.2
-              with:
-                  name: trivy-results
-                  path: ./trivy-results.json
+      - name: Integration Tests
+        run: |
+          echo "Running Integration Tests .."
+          sleep 5
+          echo "Test Frontend"
+          curl -f http://localhost:8080 > /dev/null || exit 1
+          echo "Test Backend & DB Using GET * Endpoint"
+          curl -f http://localhost:8000/notes > /dev/null || exit 1
+
+      - name: Upload NPM Audit report
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: npm-audit-report
+          path: reports/npm-audit.json
+
+      - name: Upload ESLint report
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: eslint-report
+          path: reports/eslint-report.json
+
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          scan-type: "fs"
+          scan-ref: "."
+          format: "json"
+          output: "trivy-results.json"
+
+      - name: Upload Trivy results
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: trivy-results
+          path: ./trivy-results.json
