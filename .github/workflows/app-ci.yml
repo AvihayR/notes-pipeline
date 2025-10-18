@@ -41,7 +41,7 @@ jobs:
             gh issue create \
               --title "ESLint found $ESLINT_ERRORS Errors and $ESLINT_WARNINGS Warnings" \
               --body "ESLint has detected **$ESLINT_ERRORS errors** and **$ESLINT_WARNINGS warnings**.
-              Please download the \`eslint-report\` artifact from the [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) and fix the issues accordingly." \
+              Please download the \`eslint-report\` artifact from the [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) and fix the issues accordingly." 
           fi
 
           # Post NPM Audit reports 📭
@@ -54,7 +54,7 @@ jobs:
             gh issue create \
               --title "NPM Packages Vulnerability Scan found $NPM_CRITICALS Errors and $NPM_HIGHS" \
               --body "NPM Audit has found **$NPM_CRITICALS Critical issues** and **$NPM_HIGHS High issues**.
-              Please download the \`npm-audit.json\` artifact from the [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) and fix the issues accordingly." \
+              Please download the \`npm-audit.json\` artifact from the [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) and fix the issues accordingly."
           fi
 
         env:
