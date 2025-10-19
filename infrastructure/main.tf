@@ -98,8 +98,8 @@ module "ecs" {
   private_subnet_ids  = [for s in module.private_subnets : s.id]
 }
 
-output "ecr_repository_url" {
-  value = module.ecr.url
+output "ecr_repository_urls" {
+  value = [for s in module.ecr : s.url]
 }
 
 output "ecs_cluster_name" {

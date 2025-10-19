@@ -59,6 +59,10 @@ jobs:
       - name: Terraform Validate
         run: terraform validate
 
+      - name: Terraform Destroy
+        if: (github.event.inputs.action == 'destroy')
+        run: terraform destroy -auto-approve
+
       - name: Terraform Plan
         id: plan
         env:
@@ -81,7 +85,7 @@ jobs:
         if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event.inputs.action == 'apply')
         id: tf-outputs
         run: |
-          echo "ecr_repository=$(terraform output -raw ecr_repository_url)" >> $GITHUB_OUTPUT 
+          echo "ecr_repository=$(terraform output -raw ecr_repository_urls)" >> $GITHUB_OUTPUT 
           echo "ecs_cluster=$(terraform output -raw ecs_cluster_name)" >> $GITHUB_OUTPUT 
           echo "alb_dns=$(terraform output -raw alb_dns_name)" >> $GITHUB_OUTPUT
 
