@@ -228,3 +228,7 @@ resource "aws_ecs_service" "backend" {
     Name = "notes-backend-service"
   }
 }
+
+output "cluster_name" {
+  value = aws_ecs_cluster.notes-cluster.name
+}
