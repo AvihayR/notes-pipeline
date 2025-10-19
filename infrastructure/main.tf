@@ -97,3 +97,15 @@ module "ecs" {
   alb_sg_ids          = [module.alb.sg_id]
   private_subnet_ids  = [for s in module.private_subnets : s.id]
 }
+
+output "ecr_repository_url" {
+  value = module.ecr.url
+}
+
+output "ecs_cluster_name" {
+  value = module.ecs.cluster_name
+}
+
+output "alb_dns_name" {
+  value = module.alb.alb_url
+}
