@@ -1,0 +1,100 @@
+name: IaC with Terraform -> Deprovision / Provision Infrastructure in AWS
+
+on:
+    push:
+        branches:
+            - main
+        paths:
+            - "infrastructure/**"
+    pull_request:
+        paths:
+            - "infrastructure/**"
+    workflow_dispatch:
+        inputs:
+            action:
+                description: "Terraform action to perform"
+                required: true
+                default: "plan"
+                type: choice
+                options:
+                    - plan
+                    - apply
+                    - destroy
+
+env:
+    AWS_REGION: eu-central-1
+    TF_VERSION: 1.13.4
+
+jobs:
+    terraform:
+        name: Terraform
+        runs-on: ubuntu-latest
+        defaults:
+            run:
+                working-directory: infrastructure
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 #v5.0.0
+
+            - name: Configure AWS credentials
+              uses: aws-actions/configure-aws-credentials@00943011d9042930efac3dcd3a170e4273319bc8 #v5.1.0
+              with:
+                  aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+                  aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+                  aws-region: ${{ env.AWS_REGION }}
+
+            - name: Setup Terraform
+              uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd #v3.1.2
+              with:
+                  terraform_version: ${{ env.TF_VERSION }}
+                  terraform_wrapper: false
+
+            - name: Terraform Init
+              run: terraform init
+
+            - name: Terraform Format Check
+              run: terraform fmt -check
+
+            - name: Terraform Validate
+              run: terraform validate
+
+            - name: Export DB creds env vars for Terraform
+              run: |
+                  TF_VAR_db_user="${{secrets.DB_USERNAME}}" 
+                  TF_VAR_db_password="${{secrets.DB_PASSWORD}}"
+
+            - name: Terraform Plan
+              id: plan
+              run: |
+                  terraform plan - -out=tfplan
+
+            - name: Upload Terraform Plan
+              uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 #v4.6.2
+              with:
+                  name: terraform-plan
+                  path: infrastructure/tfplan
+
+            - name: Terraform Apply
+              if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event.inputs.action == 'apply')
+              run: terraform apply -auto-approve tfplan
+
+            - name: Export Terraform Outputs
+              if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event.inputs.action == 'apply')
+              id: tf-outputs
+              run: |
+                  echo "ecr_repository=$(terraform output -raw ecr_repository_url)" >> $GITHUB_OUTPUT 
+                  echo "ecs_cluster=$(terraform output -raw ecs_cluster_name)" >> $GITHUB_OUTPUT 
+                  echo "alb_dns=$(terraform output -raw alb_dns_name)" >> $GITHUB_OUTPUT
+
+            - name: Save outputs to artifact
+              if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event.inputs.action == 'apply')
+              run: |
+                  terraform output -json > ../terraform-outputs.json
+
+            - name: Upload Terraform Outputs
+              if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event.inputs.action == 'apply')
+              uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 #v4.6.2
+              with:
+                  name: terraform-outputs
+                  path: terraform-outputs.json
