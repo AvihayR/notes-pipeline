@@ -59,13 +59,11 @@ jobs:
       - name: Terraform Validate
         run: terraform validate
 
-      - name: Export DB creds env vars for Terraform
-        run: |
-          TF_VAR_db_user="${{secrets.DB_USERNAME}}" 
-          TF_VAR_db_password="${{secrets.DB_PASSWORD}}"
-
       - name: Terraform Plan
         id: plan
+        env:
+          TF_VAR_db_user: ${{ secrets.DB_USERNAME }}
+          TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
         run: |
           terraform plan -out=tfplan
 
