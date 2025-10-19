@@ -31,7 +31,6 @@ resource "aws_ecr_lifecycle_policy" "main" {
   })
 }
 
-
 output "url" {
   value = aws_ecr_repository.notes_repo.repository_url
 }
