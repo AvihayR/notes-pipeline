@@ -109,3 +109,7 @@ output "ecs_cluster_name" {
 output "alb_dns_name" {
   value = module.alb.alb_url
 }
+
+output "doc_db_url" {
+  value = module.doc_db.url
+}

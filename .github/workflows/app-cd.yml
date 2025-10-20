@@ -1,0 +1,76 @@
+name: Deploy Application
+
+on:
+    push:
+        branches:
+            - main
+        paths-ignore:
+            - "infrastructure/**"
+    workflow_dispatch:
+
+env:
+    AWS_REGION: eu-central-1
+    TF_VERSION: 1.13.4
+
+jobs:
+    build-and-push:
+        name: Build and Push Docker Images
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 #v5.0.0
+
+            - name: Setup Terraform
+              uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd #v3.1.2
+              with:
+                  terraform_version: ${{ env.TF_VERSION }}
+                  terraform_wrapper: false
+
+            - name: Configure AWS credentials
+              uses: aws-actions/configure-aws-credentials@00943011d9042930efac3dcd3a170e4273319bc8 #v5.1.0
+              with:
+                  aws-access-key-id: ${{env.AWS_ACCESS_KEY_ID}}
+                  aws-secret-access-key: ${{env.AWS_SECRET_ACCESS_KEY}}
+                  aws-region: ${{ env.AWS_REGION }}
+
+            - name: Terraform Init
+              run: terraform init
+
+            - name: Retrieve ECR Repos details
+              id: get-ecr
+              run: |
+                  echo "ecr_urls=$(terraform output -json ecr)" >> "$GITHUB_OUTPUT"
+                  echo "alb_dns=$(terraform output -json alb_dns_name)" >> "$GITHUB_OUTPUT"
+                  echo "doc_db_url=$(terraform output -json doc_db_url)" >> "$GITHUB_OUTPUT"
+
+            - name: Login to Amazon ECR
+              id: login-ecr
+              uses: aws-actions/amazon-ecr-login@062b18b96a7aff071d4dc91bc00c4c1a7945b076 #v2.0.1
+
+            - name: Build and push Backend image
+              uses: docker/build-push-action@v6.18.0
+              with:
+                  context: ./backend
+                  push: true
+                  build-args: |
+                      MONGODB_URL=${{steps.get-ecr.outputs.doc_db_url}}
+
+                  tags: |
+                      ${{ steps.login-ecr.outputs.registry }}/notes-backend:${{ github.sha }}
+                      ${{ steps.login-ecr.outputs.registry }}/notes-backend:latest
+                  cache-from: type=gha
+                  cache-to: type=gha,mode=max
+
+            - name: Build and push Frontend image
+              uses: docker/build-push-action@v5
+              with:
+                  context: ./frontend
+                  push: true
+                  build-args: /
+                      VITE_API_URL=${{steps.get-ecr.outputs.alb_dns}}/api
+
+                  tags: |
+                      ${{ steps.login-ecr.outputs.registry }}/notes-frontend:${{ github.sha }}
+                      ${{ steps.login-ecr.outputs.registry }}/notes-frontend:latest
+                  cache-from: type=gha
+                  cache-to: type=gha,mode=max
