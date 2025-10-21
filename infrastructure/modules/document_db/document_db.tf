@@ -63,6 +63,7 @@ resource "aws_security_group" "docdb_sg" {
 }
 
 output "url" {
-  value = aws_docdb_cluster.notes_cluster.endpoint
+  value     = "mongodb://${var.master_username}:${var.master_password}@${aws_docdb_cluster.notes_cluster.endpoint}:27017/?tls=true&tlsCAFile=/usr/src/app/rds-combined-ca-bundle.pem&replicaSet=rs0&readPreference=secondaryPreferred&retryWrites=false"
+  sensitive = true
 }
 
