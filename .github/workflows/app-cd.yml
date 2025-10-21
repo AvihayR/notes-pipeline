@@ -67,7 +67,7 @@ jobs:
           context: ./frontend
           push: true
           build-args: /
-            VITE_API_URL=${{steps.get-ecr.outputs.alb_dns}}/api
+            VITE_API_URL=${{steps.get-ecr.outputs.alb_dns}}/notes
 
           tags: |
             ${{ steps.login-ecr.outputs.registry }}/notes-frontend:${{ github.sha }}
