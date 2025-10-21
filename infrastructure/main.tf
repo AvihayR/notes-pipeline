@@ -92,7 +92,7 @@ module "ecs" {
   ecr_repo_urls       = { backend = module.ecr["backend"].url, frontend = module.ecr["frontend"].url }
   alb_tg_backend_arn  = module.alb.backend_tg_arn
   alb_tg_frontend_arn = module.alb.frontend_tg_arn
-  backend_url         = "${module.alb.alb_url}/api"
+  backend_url         = "${module.alb.alb_url}/notes"
   db_url              = module.doc_db.url
   alb_sg_ids          = [module.alb.sg_id]
   private_subnet_ids  = [for s in module.private_subnets : s.id]
