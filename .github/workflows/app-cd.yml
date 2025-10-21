@@ -73,6 +73,10 @@ jobs:
             ${{ steps.login-ecr.outputs.registry }}/notes-frontend:${{ github.sha }}
             ${{ steps.login-ecr.outputs.registry }}/notes-frontend:latest
 
+      - name: Generate TF Artifacts
+        run: terraform output -json > tf-infra.json
+        working-directory: ./infrastructure
+
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 #v4.6.2
         with:
