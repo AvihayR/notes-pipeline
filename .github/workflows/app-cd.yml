@@ -35,6 +35,7 @@ jobs:
 
       - name: Terraform Init
         run: terraform init
+        working-directory: ./infrastructure
 
       - name: Retrieve ECR Repos details
         id: get-ecr
@@ -42,6 +43,7 @@ jobs:
           echo "ecr_urls=$(terraform output -json ecr)" >> "$GITHUB_OUTPUT"
           echo "alb_dns=$(terraform output -json alb_dns_name)" >> "$GITHUB_OUTPUT"
           echo "doc_db_url=$(terraform output -json doc_db_url)" >> "$GITHUB_OUTPUT"
+        working-directory: ./infrastructure
 
       - name: Login to Amazon ECR
         id: login-ecr
@@ -71,15 +73,11 @@ jobs:
             ${{ steps.login-ecr.outputs.registry }}/notes-frontend:${{ github.sha }}
             ${{ steps.login-ecr.outputs.registry }}/notes-frontend:latest
 
-      - name: Generate TF Outputs JSON file
-        run: |
-          terraform output -json > tf-infra.json
-
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 #v4.6.2
         with:
           name: tf-infra.json
-          path: .
+          path: .infrastructure/tf-infra.json
 
   deploy:
     name: Deploy to AWS
@@ -102,11 +100,6 @@ jobs:
         with:
           name: tf-infra.json
 
-      - name: Show tf-infra.json
-        run: |
-          ls -la
-          cat tf-infra.json
-
       - name: Deploy to ECS
         run: |
           # Update ECS service with new task definition
@@ -116,12 +109,12 @@ jobs:
               --force-new-deployment
 
           aws ecs update-service \
-              --cluster $(jq -r '.ecs_cluster_name.value' terraform-infra.json) \
+              --cluster $(jq -r '.ecs_cluster_name.value' tf-infra.json) \
               --service notes-frontend \
               --force-new-deployment
 
       - name: Wait for deployment
         run: |
           aws ecs wait services-stable \
-              --cluster $(jq -r '.ecs_cluster_name.value' terraform-infra.json) \
-              --services backend-service frontend-service
+              --cluster $(jq -r '.ecs_cluster_name.value' tf-infra.json) \
+              --services notes-frontend notes-backend
