@@ -111,5 +111,6 @@ output "alb_dns_name" {
 }
 
 output "doc_db_url" {
-  value = module.doc_db.url
+  value     = module.doc_db.url
+  sensitive = true
 }
