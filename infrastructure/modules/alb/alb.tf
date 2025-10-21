@@ -72,17 +72,16 @@ resource "aws_lb_target_group" "backend" {
   vpc_id      = var.vpc_id
   target_type = "ip"
 
-  #   health_check {
-  #     enabled             = true
-  #     healthy_threshold   = 2
-  #     interval            = 30
-  #     matcher             = "200"
-  #     path                = "/"
-  #     port                = "traffic-port"
-  #     protocol            = "HTTP"
-  #     timeout             = 5
-  #     unhealthy_threshold = 2
-  #   }
+  health_check {
+    path                = "/health"
+    protocol            = "HTTP"
+    matcher             = "200"
+    enabled             = true
+    interval            = 30
+    healthy_threshold   = 3
+    timeout             = 5
+    unhealthy_threshold = 3
+  }
 
   tags = {
     Name = "notes-backend-tg"
